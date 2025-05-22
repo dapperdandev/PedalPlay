@@ -20,12 +20,6 @@
                 <div class="metric-label">RPM</div>
             </div>
         </div>
-        
-        <div class="mt-4">
-            <button class="btn start-button" @onclick='() => Navigation.NavigateTo("connect-trainer")'>
-                Change Device
-            </button>
-        </div>
     }
     else
     {
@@ -44,16 +38,7 @@
 
     private void StartTraining()
     {
-        if (CyclingData.IsConnected)
-        {
-            // If already connected, stay on this page to show metrics
-            StateHasChanged();
-        }
-        else
-        {
-            // If not connected, go to device selection
-            Navigation.NavigateTo("connect-trainer");
-        }
+        Navigation.NavigateTo("connect-trainer");
     }
 
     private async void OnDataChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
