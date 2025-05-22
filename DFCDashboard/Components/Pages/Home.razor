@@ -1,19 +1,15 @@
 @page "/"
 @using Plugin.BLE.Abstractions.Contracts
+@using DFCDashboard.Components.Layout
 @inject DFCDashboard.Services.CyclingDataService CyclingData
+@inject NavigationManager Navigation
 @implements IDisposable
 
 <div class="start-screen">
-    @if (!CyclingData.IsConnected)
+    <ConnectionStatus />
+    
+    @if (CyclingData.IsConnected)
     {
-        <h1 class="game-title">DFC Dashboard</h1>
-        <a href="/connect-trainer" class="btn start-button">
-            <i class="bi bi-bluetooth me-2"></i>Start Training
-        </a>
-    }
-    else
-    {
-        <h1 class="game-title">Training Active</h1>
         <div class="metric-display">
             <div class="metric-box">
                 <div class="metric-value">@CyclingData.Power</div>
@@ -24,9 +20,19 @@
                 <div class="metric-label">RPM</div>
             </div>
         </div>
-        <a href="/connect-trainer" class="btn start-button mt-4">
-            Change Device
-        </a>
+        
+        <div class="mt-4">
+            <button class="btn start-button" @onclick='() => Navigation.NavigateTo("connect-trainer")'>
+                Change Device
+            </button>
+        </div>
+    }
+    else
+    {
+        <h1 class="game-title">DFC Dashboard</h1>
+        <button class="btn start-button" @onclick="StartTraining">
+            <i class="bi bi-bluetooth me-2"></i>Start Training
+        </button>
     }
 </div>
 
@@ -34,6 +40,20 @@
     protected override void OnInitialized()
     {
         CyclingData.PropertyChanged += OnDataChanged;
+    }
+
+    private void StartTraining()
+    {
+        if (CyclingData.IsConnected)
+        {
+            // If already connected, stay on this page to show metrics
+            StateHasChanged();
+        }
+        else
+        {
+            // If not connected, go to device selection
+            Navigation.NavigateTo("connect-trainer");
+        }
     }
 
     private async void OnDataChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)

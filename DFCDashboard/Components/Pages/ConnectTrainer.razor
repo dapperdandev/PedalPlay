@@ -12,10 +12,8 @@
 
 <div class="start-screen">
     <div class="connection-panel">
-        <h1 class="game-title mb-4">Select Device</h1>
-
-        <div class="d-flex justify-content-center mb-4">
-            <button class="btn start-button" @onclick="ScanForDevices" disabled="@_isScanning">
+        <div class="d-flex justify-content-center">
+            <button class="btn start-button mb-4" @onclick="ScanForDevices" disabled="@_isScanning">
                 <i class="bi @(_isScanning ? "bi-arrow-repeat spin" : "bi-bluetooth") me-2"></i>
                 @(_isScanning ? "Scanning..." : "Scan for Devices")
             </button>
@@ -86,7 +84,7 @@
             </div>
         }
 
-        <div class="mt-4">
+        <div class="mt-4 text-center">
             <a href="/" class="btn start-button">
                 <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
             </a>
@@ -102,6 +100,10 @@
         backdrop-filter: blur(10px);
         max-width: 800px;
         width: 90%;
+    }
+
+    .btn.start-button {
+        min-width: 200px;
     }
 
     .device-list {
@@ -172,6 +174,8 @@
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        min-width: 120px;
+        justify-content: center;
     }
 
     .device-status.connected {
@@ -230,6 +234,7 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        gap: 1rem;
     }
 
     .connected-device-info h2 {

@@ -1,0 +1,104 @@
+@inject DFCDashboard.Services.CyclingDataService CyclingData
+@implements IDisposable
+
+<div class="connection-status @GetStatusClass()">
+    <i class="bi @GetStatusIcon()"></i>
+    <span class="status-text">@GetStatusText()</span>
+</div>
+
+<style>
+    .connection-status {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: white;
+        font-size: 0.9rem;
+        transition: background-color 0.3s ease;
+    }
+
+    .status-connecting {
+        background: rgba(13, 202, 240, 0.3);
+        animation: pulse 2s infinite;
+    }
+
+    .status-connected {
+        background: rgba(40, 167, 69, 0.3);
+    }
+
+    .status-disconnected {
+        background: rgba(0, 0, 0, 0.3);
+    }
+
+    @@keyframes pulse {
+        0% { opacity: 0.6; }
+        50% { opacity: 1; }
+        100% { opacity: 0.6; }
+    }
+
+    .status-text {
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-size: 0.8rem;
+    }
+</style>
+
+@code {
+    private bool _isInitializing = true;
+
+    protected override void OnInitialized()
+    {
+        CyclingData.PropertyChanged += OnDataChanged;
+        
+        // After 2 seconds (matching our reconnection delay), consider initialization done
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(2000);
+            _isInitializing = false;
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private string GetStatusClass()
+    {
+        if (_isInitializing || CyclingData.IsReconnecting)
+            return "status-connecting";
+        if (CyclingData.IsConnected)
+            return "status-connected";
+        return "status-disconnected";
+    }
+
+    private string GetStatusIcon()
+    {
+        if (_isInitializing || CyclingData.IsReconnecting)
+            return "bi-bluetooth";
+        if (CyclingData.IsConnected)
+            return "bi-bluetooth-connected";
+        return "bi-bluetooth";
+    }
+
+    private string GetStatusText()
+    {
+        if (_isInitializing)
+            return "Initializing...";
+        if (CyclingData.IsReconnecting)
+            return "Connecting...";
+        if (CyclingData.IsConnected)
+            return "Connected";
+        return "Disconnected";
+    }
+
+    private async void OnDataChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        CyclingData.PropertyChanged -= OnDataChanged;
+    }
+}

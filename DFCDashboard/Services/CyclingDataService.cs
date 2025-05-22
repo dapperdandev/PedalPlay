@@ -39,6 +39,7 @@ public class CyclingDataService : INotifyPropertyChanged
     private int _power;
     private int _cadence;
     private bool _isConnected;
+    private bool _isReconnecting;
 
     private uint _lastCrankRevolutions = 0;
     private ushort _lastCrankEventTime = 0;
@@ -61,6 +62,12 @@ public class CyclingDataService : INotifyPropertyChanged
     {
         get => _isConnected;
         private set => SetProperty(ref _isConnected, value);
+    }
+
+    public bool IsReconnecting
+    {
+        get => _isReconnecting;
+        private set => SetProperty(ref _isReconnecting, value);
     }
 
     public CyclingDataService(IAdapter adapter)
@@ -94,6 +101,8 @@ public class CyclingDataService : INotifyPropertyChanged
 
         try
         {
+            IsReconnecting = true;
+
             var json = Preferences.Get(DeviceInfoKey, string.Empty);
             var deviceInfo = JsonSerializer.Deserialize<DeviceInfo>(json);
             
@@ -162,6 +171,10 @@ public class CyclingDataService : INotifyPropertyChanged
                 await Disconnect();
             }
             catch { }
+        }
+        finally
+        {
+            IsReconnecting = false;
         }
         
         return false;
