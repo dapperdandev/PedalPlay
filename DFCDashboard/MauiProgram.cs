@@ -30,6 +30,9 @@ namespace DFCDashboard
                 return adapter;
             });
             
+            // Register services
+            builder.Services.AddSingleton<Services.CyclingDataService>();
+            
             // Register the ConnectTrainer page
             builder.Services.AddScoped<DFCDashboard.Components.Pages.ConnectTrainer>();
             

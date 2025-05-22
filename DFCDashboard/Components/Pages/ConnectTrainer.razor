@@ -3,9 +3,12 @@
 @using Plugin.BLE.Abstractions.EventArgs
 @using Plugin.BLE.Abstractions.Extensions
 @using Plugin.BLE.Abstractions
+@using DFCDashboard.Services
 @inject IBluetoothLE BluetoothLE
 @inject IAdapter Adapter
 @inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+@inject CyclingDataService CyclingData
 
 <style>
     .device-list {
@@ -272,19 +275,22 @@
             // Cancel any ongoing scan
             _scanCts?.Cancel();
 
-            var connectParameters = new ConnectParameters(
-                autoConnect: false,
-                forceBleTransport: true);
-
-            await Adapter.ConnectToDeviceAsync(device, connectParameters);
+            // Connect using our CyclingDataService
+            await CyclingData.ConnectToDevice(device);
+            _connectedDevice = device;
+            _statusMessage = $"Successfully connected to {device.Name}";
             
-            // The OnDeviceConnected event will handle the rest
+            // Navigate to home page after successful connection
+            Navigation.NavigateTo("/");
         }
         catch (Exception ex)
         {
             _statusMessage = $"Failed to connect to {device.Name}: {ex.Message}";
-            await InvokeAsync(StateHasChanged);
             Console.WriteLine($"Connection error: {ex}");
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
         }
     }
 
@@ -298,7 +304,8 @@
             var deviceToDisconnect = _connectedDevice;
             _connectedDevice = null;
             
-            await Adapter.DisconnectDeviceAsync(deviceToDisconnect);
+            // Disconnect using our CyclingDataService
+            await CyclingData.Disconnect();
             _statusMessage = $"Disconnected from {deviceToDisconnect.Name}";
         }
         catch (Exception ex)
