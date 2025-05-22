@@ -11,7 +11,6 @@ public class CyclingDataService : INotifyPropertyChanged
 {
     private readonly IAdapter _adapter;
     private const string DeviceInfoKey = "saved_ble_device";
-    private readonly string _logFilePath;
     
     private class DeviceInfo
     {
@@ -69,23 +68,6 @@ public class CyclingDataService : INotifyPropertyChanged
         _adapter = adapter ?? throw new ArgumentNullException(nameof(adapter));
         _adapter.DeviceConnected += OnDeviceConnected;
         _adapter.DeviceDisconnected += OnDeviceDisconnected;
-        
-        // Set log file in the project directory
-        _logFilePath = Path.Combine(Directory.GetCurrentDirectory(), "dfc_data.log");
-        LogMessage("CyclingDataService initialized");
-    }
-
-    private void LogMessage(string message)
-    {
-        var logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}: {message}{Environment.NewLine}";
-        try
-        {
-            File.AppendAllText(_logFilePath, logEntry);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to write to log file: {ex.Message}");
-        }
     }
 
     private void OnDeviceConnected(object? sender, DeviceEventArgs e)
@@ -105,49 +87,36 @@ public class CyclingDataService : INotifyPropertyChanged
 
     public async Task<bool> TryReconnectLastDeviceAsync()
     {
-        Console.WriteLine("Attempting to reconnect to last device...");
-        
         if (!Preferences.ContainsKey(DeviceInfoKey))
         {
-            Console.WriteLine("No saved device found in preferences");
             return false;
         }
 
         try
         {
             var json = Preferences.Get(DeviceInfoKey, string.Empty);
-            Console.WriteLine($"Found saved device info: {json}");
-            
             var deviceInfo = JsonSerializer.Deserialize<DeviceInfo>(json);
             
             if (deviceInfo == null)
             {
-                Console.WriteLine("Failed to deserialize device info");
                 return false;
             }
-
-            Console.WriteLine($"Looking for device with ID: {deviceInfo.Id}");
             
             // Look for the device in the system's paired devices
             var devices = _adapter.GetSystemConnectedOrPairedDevices(
                 new[] { BluetoothUuids.CyclingPowerService });
-                
-            Console.WriteLine($"Found {devices.Count} paired/connected devices");
             
             var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceInfo.Id);
             
             if (device != null)
             {
-                Console.WriteLine($"Found matching device: {device.Name} ({device.Id})");
                 await ConnectToDevice(device);
                 return true;
             }
-            
-            Console.WriteLine("No matching device found");
         }
-        catch (Exception ex)
+        catch
         {
-            Console.WriteLine($"Error during reconnection attempt: {ex.Message}");
+            // Ignore any errors during reconnection
         }
         
         return false;
@@ -156,8 +125,6 @@ public class CyclingDataService : INotifyPropertyChanged
     public async Task ConnectToDevice(IDevice device)
     {
         if (device == null) throw new ArgumentNullException(nameof(device));
-
-        Console.WriteLine($"Connecting to device: {device.Name} ({device.Id})");
 
         try
         {
@@ -170,12 +137,8 @@ public class CyclingDataService : INotifyPropertyChanged
             };
             
             var json = JsonSerializer.Serialize(deviceInfo);
-            Console.WriteLine($"Saving device info: {json}");
             Preferences.Set(DeviceInfoKey, json);
             
-            // Verify the save was successful
-            var savedJson = Preferences.Get(DeviceInfoKey, string.Empty);
-            Console.WriteLine($"Device info saved: {!string.IsNullOrEmpty(savedJson)}");
             _connectedDevice = device;
             
             // Connect to the device
@@ -218,12 +181,11 @@ public class CyclingDataService : INotifyPropertyChanged
     {
         try
         {
-            // Clear saved device info when disconnecting
             if (Preferences.ContainsKey(DeviceInfoKey))
             {
                 Preferences.Remove(DeviceInfoKey);
             }
-            // Stop notifications
+            
             if (_powerMeasurementCharacteristic != null)
             {
                 _powerMeasurementCharacteristic.ValueUpdated -= OnPowerMeasurementUpdated;
@@ -231,7 +193,6 @@ public class CyclingDataService : INotifyPropertyChanged
                 _powerMeasurementCharacteristic = null;
             }
             
-            // Disconnect from device
             if (_connectedDevice != null)
             {
                 await _adapter.DisconnectDeviceAsync(_connectedDevice);
@@ -245,7 +206,6 @@ public class CyclingDataService : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error disconnecting: {ex.Message}");
             throw;
         }
     }
@@ -255,14 +215,7 @@ public class CyclingDataService : INotifyPropertyChanged
         try
         {
             var data = e.Characteristic.Value;
-            if (data == null || data.Length < 8) 
-            {
-                LogMessage($"Received data too short: {(data?.Length ?? 0)} bytes");
-                return;
-            }
-
-            // Log raw data bytes
-            LogMessage($"Raw data bytes: {BitConverter.ToString(data)}");
+            if (data == null || data.Length < 8) return;
 
             // First byte contains flags
             byte flags = data[0];
@@ -321,17 +274,11 @@ public class CyclingDataService : INotifyPropertyChanged
 
                 _lastCrankRevolutions = crankRevolutions;
                 _lastCrankEventTime = crankEventTime;
-
-                LogMessage($"Parsed values - Power: {Power}, Crank Rev: {crankRevolutions}, Event Time: {crankEventTime}, Calculated Cadence: {Cadence}");
-            }
-            else
-            {
-                LogMessage($"No crank data in message. Flags: {flags:X2}");
             }
         }
-        catch (Exception ex)
+        catch
         {
-            LogMessage($"Error parsing power data: {ex.Message}");
+            // Ignore any parsing errors
         }
     }
 
