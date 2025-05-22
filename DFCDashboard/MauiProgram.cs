@@ -33,17 +33,47 @@ namespace DFCDashboard
             // Register services
             builder.Services.AddSingleton<Services.CyclingDataService>();
             
-            // Register the ConnectTrainer page
-            builder.Services.AddScoped<DFCDashboard.Components.Pages.ConnectTrainer>();
-            
             builder.Services.AddMauiBlazorWebView();
-
+            
+            // Register the MainPage
+            builder.Services.AddSingleton<MainPage>();
+            
+            // Register the App class
+            builder.Services.AddSingleton<App>();
+            
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();
             builder.Logging.AddDebug();
 #endif
 
-            return builder.Build();
+            // Build the app
+            var app = builder.Build();
+            
+            // Get the service provider
+            var serviceProvider = app.Services;
+            
+            // Start the auto-reconnect process in the background
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    Console.WriteLine("App started, preparing for auto-reconnect...");
+                    
+                    // Give the app a moment to fully initialize
+                    await Task.Delay(2000);
+                    
+                    var cyclingData = serviceProvider.GetRequiredService<Services.CyclingDataService>();
+                    Console.WriteLine("Attempting to reconnect to last device...");
+                    var success = await cyclingData.TryReconnectLastDeviceAsync();
+                    Console.WriteLine($"Auto-reconnect {(success ? "succeeded" : "failed")}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error during auto-reconnect: {ex}");
+                }
+            });
+            
+            return app;
         }
     }
 }

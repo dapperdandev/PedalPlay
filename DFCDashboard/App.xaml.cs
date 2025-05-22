@@ -1,12 +1,20 @@
-﻿namespace DFCDashboard
+using Microsoft.Maui;
+using Microsoft.Maui.Controls;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace DFCDashboard
 {
     public partial class App : Application
     {
-        public App()
-        {
-            InitializeComponent();
+        private readonly IServiceProvider _serviceProvider;
 
-            MainPage = new MainPage();
+        public App(IServiceProvider serviceProvider)
+        {
+            _serviceProvider = serviceProvider;
+            InitializeComponent();
+            
+            // Set the main page
+            MainPage = _serviceProvider.GetRequiredService<MainPage>();
         }
     }
 }
