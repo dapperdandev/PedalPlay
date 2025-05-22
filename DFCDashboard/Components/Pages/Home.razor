@@ -3,89 +3,32 @@
 @inject DFCDashboard.Services.CyclingDataService CyclingData
 @implements IDisposable
 
-<div class="container mt-4">
-    <div class="card">
-        <div class="card-header bg-primary text-white">
-            <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h5 mb-0">Cycling Dashboard</h1>
-                <span class="badge @(CyclingData.IsConnected ? "bg-success" : "bg-secondary") rounded-pill">
-                    @(CyclingData.IsConnected ? "Connected" : "Disconnected")
-                </span>
+<div class="start-screen">
+    @if (!CyclingData.IsConnected)
+    {
+        <h1 class="game-title">DFC Dashboard</h1>
+        <a href="/connect-trainer" class="btn start-button">
+            <i class="bi bi-bluetooth me-2"></i>Start Training
+        </a>
+    }
+    else
+    {
+        <h1 class="game-title">Training Active</h1>
+        <div class="metric-display">
+            <div class="metric-box">
+                <div class="metric-value">@CyclingData.Power</div>
+                <div class="metric-label">Watts</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-value">@CyclingData.Cadence</div>
+                <div class="metric-label">RPM</div>
             </div>
         </div>
-        <div class="card-body">
-            @if (CyclingData.IsConnected)
-            {
-                <div class="row">
-                    <div class="col-md-6 mb-4">
-                        <div class="metric-card">
-                            <h3>Power</h3>
-                            <div class="metric-value">@CyclingData.Power</div>
-                            <div class="metric-unit">Watts</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-4">
-                        <div class="metric-card">
-                            <h3>Cadence</h3>
-                            <div class="metric-value">@CyclingData.Cadence</div>
-                            <div class="metric-unit">RPM</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="text-center mt-4">
-                    <a href="/connect-trainer" class="btn btn-outline-primary">
-                        <i class="bi bi-arrow-left me-2"></i>Back to Connection
-                    </a>
-                </div>
-            }
-            else
-            {
-                <div class="text-center py-5">
-                    <div class="alert alert-info">
-                        <i class="bi bi-bluetooth me-2"></i>
-                        <h4>No Device Connected</h4>
-                        <p>Please connect to your cycling device to view real-time data.</p>
-                        <a href="/connect-trainer" class="btn btn-primary">
-                            <i class="bi bi-bluetooth me-2"></i>Connect Device
-                        </a>
-                    </div>
-                </div>
-            }
-        </div>
-    </div>
+        <a href="/connect-trainer" class="btn start-button mt-4">
+            Change Device
+        </a>
+    }
 </div>
-
-<style>
-    .metric-card {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        height: 100%;
-    }
-
-    .metric-value {
-        font-size: 3.5rem;
-        font-weight: bold;
-        color: #0d6efd;
-        line-height: 1;
-        margin: 10px 0;
-    }
-
-    .metric-unit {
-        font-size: 1.2rem;
-        color: #6c757d;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    h3 {
-        color: #495057;
-        margin-bottom: 0.5rem;
-        font-size: 1.25rem;
-    }
-</style>
 
 @code {
     protected override void OnInitialized()
