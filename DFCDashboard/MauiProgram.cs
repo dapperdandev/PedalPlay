@@ -35,12 +35,9 @@ namespace DFCDashboard
             
             builder.Services.AddMauiBlazorWebView();
             
-            // Register the MainPage
+            // Register pages
             builder.Services.AddSingleton<MainPage>();
-            
-            // Register the App class
-            builder.Services.AddSingleton<App>();
-            
+
 #if DEBUG
             builder.Services.AddBlazorWebViewDeveloperTools();
             builder.Logging.AddDebug();
@@ -57,22 +54,29 @@ namespace DFCDashboard
             {
                 try
                 {
-                    Console.WriteLine("App started, preparing for auto-reconnect...");
-                    
                     // Give the app a moment to fully initialize
                     await Task.Delay(2000);
                     
                     var cyclingData = serviceProvider.GetRequiredService<Services.CyclingDataService>();
-                    Console.WriteLine("Attempting to reconnect to last device...");
-                    var success = await cyclingData.TryReconnectLastDeviceAsync();
-                    Console.WriteLine($"Auto-reconnect {(success ? "succeeded" : "failed")}");
+                    
+                    // Try to reconnect every 5 seconds until successful or bluetooth becomes available
+                    while (!await cyclingData.TryReconnectLastDeviceAsync())
+                    {
+                        // Check if Bluetooth is available
+                        var ble = serviceProvider.GetRequiredService<IBluetoothLE>();
+                        if (!ble.IsAvailable || !ble.IsOn)
+                        {
+                            break;
+                        }
+                        await Task.Delay(5000);
+                    }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error during auto-reconnect: {ex}");
+                    System.Diagnostics.Debug.WriteLine($"Auto-reconnect error: {ex.Message}");
                 }
             });
-            
+
             return app;
         }
     }

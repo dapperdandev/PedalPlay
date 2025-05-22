@@ -101,12 +101,51 @@ public class CyclingDataService : INotifyPropertyChanged
             {
                 return false;
             }
-            
-            // Look for the device in the system's paired devices
+
+            // First try paired devices
             var devices = _adapter.GetSystemConnectedOrPairedDevices(
                 new[] { BluetoothUuids.CyclingPowerService });
             
             var device = devices.FirstOrDefault(d => d.Id.ToString() == deviceInfo.Id);
+
+            // If not found in paired devices, try scanning
+            if (device == null)
+            {
+                var scanCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                
+                // Set up a TaskCompletionSource for the device discovery
+                var deviceFound = new TaskCompletionSource<IDevice>();
+                
+                void OnDeviceDiscovered(object? s, DeviceEventArgs args)
+                {
+                    if (args.Device?.Id.ToString() == deviceInfo.Id)
+                    {
+                        deviceFound.TrySetResult(args.Device);
+                    }
+                }
+
+                try
+                {
+                    _adapter.DeviceDiscovered += OnDeviceDiscovered;
+                    
+                    // Start scanning
+                    await _adapter.StartScanningForDevicesAsync(cancellationToken: scanCts.Token);
+                    
+                    // Wait for device to be found or timeout
+                    using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    device = await deviceFound.Task.WaitAsync(timeoutCts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Timeout or scan cancelled, device not found
+                    return false;
+                }
+                finally
+                {
+                    _adapter.DeviceDiscovered -= OnDeviceDiscovered;
+                    try { await _adapter.StopScanningForDevicesAsync(); } catch { }
+                }
+            }
             
             if (device != null)
             {
@@ -117,6 +156,12 @@ public class CyclingDataService : INotifyPropertyChanged
         catch
         {
             // Ignore any errors during reconnection
+            // but make sure we're in a clean state
+            try
+            {
+                await Disconnect();
+            }
+            catch { }
         }
         
         return false;
@@ -204,7 +249,7 @@ public class CyclingDataService : INotifyPropertyChanged
             Power = 0;
             Cadence = 0;
         }
-        catch (Exception ex)
+        catch
         {
             throw;
         }
